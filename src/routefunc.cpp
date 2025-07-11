@@ -1996,4 +1996,65 @@ void InitializeRoutingMap( const Configuration & config )
 
   gRoutingFunctionMap["chaos_mesh"]  = &chaos_mesh;
   gRoutingFunctionMap["chaos_torus"] = &chaos_torus;
+  
+  gRoutingFunctionMap["dor_unidirectional_torus"] = &dim_order_unidirectional_torus;
+}
+
+// Routing function for unidirectional torus
+void dim_order_unidirectional_torus( const Router *r, const Flit *f, int in_channel, 
+                                    OutputSet *outputs, bool inject )
+{
+  int vcBegin = 0, vcEnd = gNumVCs-1;
+  if ( f->type == Flit::READ_REQUEST ) {
+    vcBegin = gReadReqBeginVC;
+    vcEnd = gReadReqEndVC;
+  } else if ( f->type == Flit::WRITE_REQUEST ) {
+    vcBegin = gWriteReqBeginVC;
+    vcEnd = gWriteReqEndVC;
+  } else if ( f->type ==  Flit::READ_REPLY ) {
+    vcBegin = gReadReplyBeginVC;
+    vcEnd = gReadReplyEndVC;
+  } else if ( f->type ==  Flit::WRITE_REPLY ) {
+    vcBegin = gWriteReplyBeginVC;
+    vcEnd = gWriteReplyEndVC;
+  }
+  assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
+
+  int out_port;
+
+  if(inject) {
+    out_port = -1;
+  } else {
+    int cur = r->GetID( );
+    int dest = f->dest;
+    
+    if ( cur == dest ) {
+      out_port = gN; // Ejection port
+    } else {
+      // Dimension-order routing for unidirectional torus
+      // For 2D torus: dimension 0 is X, dimension 1 is Y
+      // Only routes East (positive X) and South (positive Y)
+      
+      // Calculate current and destination coordinates  
+      int cur_x = cur % gK;
+      int cur_y = cur / gK;
+      int dest_x = dest % gK;
+      int dest_y = dest / gK;
+      
+      // Route in X dimension first (dimension-order)
+      if ( cur_x != dest_x ) {
+        // Always route East (positive X direction)
+        out_port = 0; // East port
+      } else if ( cur_y != dest_y ) {
+        // Route in Y dimension - always route South (positive Y direction)  
+        out_port = 1; // South port
+      } else {
+        // Should not reach here if cur != dest
+        out_port = gN; // Ejection port
+      }
+    }
+  }
+
+  outputs->Clear( );
+  outputs->AddRange( out_port, vcBegin, vcEnd );
 }

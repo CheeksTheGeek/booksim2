@@ -25,28 +25,38 @@
  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef _ROUTEFUNC_HPP_
-#define _ROUTEFUNC_HPP_
+#ifndef _UNIDIRECTIONAL_TORUS_HPP_
+#define _UNIDIRECTIONAL_TORUS_HPP_
 
-#include "flit.hpp"
-#include "router.hpp"
-#include "outputset.hpp"
-#include "config_utils.hpp"
+#include "network.hpp"
 
-typedef void (*tRoutingFunction)( const Router *, const Flit *, int in_channel, OutputSet *, bool );
+class UnidirectionalTorus : public Network {
 
-void InitializeRoutingMap( const Configuration & config );
+  int _k;
+  int _n;
 
-extern map<string, tRoutingFunction> gRoutingFunctionMap;
+  void _ComputeSize( const Configuration &config );
+  void _BuildNet( const Configuration &config );
 
-extern int gNumVCs;
-extern int gReadReqBeginVC, gReadReqEndVC;
-extern int gWriteReqBeginVC, gWriteReqEndVC;
-extern int gReadReplyBeginVC, gReadReplyEndVC;
-extern int gWriteReplyBeginVC, gWriteReplyEndVC;
+  int _EastChannel( int node, int dim );
+  int _SouthChannel( int node, int dim );
 
-// Unidirectional torus routing function
-void dim_order_unidirectional_torus( const Router *r, const Flit *f, int in_channel, 
-                                    OutputSet *outputs, bool inject );
+  int _EastNode( int node, int dim );
+  int _SouthNode( int node, int dim );
+  int _WestNode( int node, int dim );
+  int _NorthNode( int node, int dim );
 
-#endif
+public:
+  UnidirectionalTorus( const Configuration &config, const string & name );
+  static void RegisterRoutingFunctions();
+
+  int GetN( ) const;
+  int GetK( ) const;
+
+  double Capacity( ) const;
+
+  void InsertRandomFaults( const Configuration &config );
+
+};
+
+#endif 
